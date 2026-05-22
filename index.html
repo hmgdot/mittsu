@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="みっつ">
+<meta name="theme-color" content="#2D5F3F">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<title>みっつ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F5F2EC;
+    --surface: #FFFFFF;
+    --ink: #1A1814;
+    --ink-muted: #8A8680;
+    --ink-faint: #C8C4BC;
+    --accent: #2D5F3F;
+    --accent-light: #E8F0EB;
+    --danger: #C0392B;
+    --radius: 18px;
+    --radius-sm: 10px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    padding-top: calc(var(--safe-top) + 1.5rem);
+    padding-bottom: calc(var(--safe-bottom) + 5rem);
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+
+  /* ── ヘッダー ── */
+  .header { margin-bottom: 1.75rem; }
+  .date-label { font-size: 12px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 4px; }
+  h1 { font-family: 'DM Serif Display', serif; font-size: 38px; line-height: 1.1; margin-bottom: 6px; }
+  h1 em { font-style: italic; color: var(--accent); }
+  .mode-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 500; padding: 4px 12px;
+    border-radius: 999px; border: 1px solid var(--ink-faint);
+    color: var(--ink-muted);
+  }
+  .mode-badge.morning { background: #FFF8E7; border-color: #F0D070; color: #7A5C00; }
+  .mode-badge.evening { background: #EEF2FF; border-color: #B0BEFF; color: #3340A0; }
+  .mode-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+  /* ── 進捗 ── */
+  .progress-row { display: flex; align-items: center; gap: 12px; margin-bottom: 1rem; }
+  .progress-track { flex: 1; height: 3px; background: var(--ink-faint); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 3px; background: var(--accent); border-radius: 2px; transition: width 0.5s ease; }
+  .progress-text { font-size: 12px; color: var(--ink-muted); font-weight: 500; white-space: nowrap; }
+
+  /* ── タスクカード ── */
+  .task-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+
+  .task-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    display: flex; align-items: center; gap: 14px;
+    transition: transform 0.15s ease, opacity 0.3s ease;
+    animation: slideIn 0.25s ease;
+  }
+
+  .task-card.done { opacity: 0.45; }
+  .task-card.done .task-text { text-decoration: line-through; color: var(--ink-muted); }
+
+  .check-btn {
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 2px solid var(--ink-faint);
+    background: transparent; cursor: pointer; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color 0.2s, background 0.2s;
+    font-size: 14px; color: transparent;
+  }
+  .task-card.done .check-btn { background: var(--accent); border-color: var(--accent); color: white; }
+
+  .task-body { flex: 1; min-width: 0; }
+  .task-text { font-size: 16px; color: var(--ink); line-height: 1.4; }
+  .task-time { font-size: 12px; color: var(--ink-muted); margin-top: 2px; }
+
+  .del-btn {
+    width: 30px; height: 30px; border: none; background: transparent;
+    cursor: pointer; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; color: var(--ink-faint); font-size: 16px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .del-btn:active { color: var(--danger); background: #fdecea; }
+
+  /* 朝モードでは削除ボタン表示、夜モードでは非表示 */
+  .evening-mode .del-btn { display: none; }
+  .evening-mode .check-btn { cursor: pointer; }
+
+  /* ── 追加エリア ── */
+  .add-area {
+    background: var(--surface);
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1.5px dashed var(--ink-faint);
+    transition: border-color 0.2s;
+    margin-bottom: 10px;
+  }
+  .add-area:focus-within { border-color: var(--accent); border-style: solid; }
+  .add-area.hidden { display: none; }
+
+  .add-inner { display: flex; align-items: center; gap: 12px; padding: 16px 18px 10px; }
+  .add-icon {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent-light); color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0; line-height: 1;
+  }
+  .add-input {
+    flex: 1; border: none; outline: none;
+    font-family: 'DM Sans', sans-serif; font-size: 16px;
+    color: var(--ink); background: transparent;
+  }
+  .add-input::placeholder { color: var(--ink-faint); }
+  .add-footer { padding: 0 18px 14px 58px; display: flex; gap: 8px; align-items: center; }
+  .time-input {
+    border: 1px solid var(--ink-faint); border-radius: var(--radius-sm);
+    padding: 5px 10px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--ink); background: transparent; outline: none;
+  }
+  .time-input:focus { border-color: var(--accent); }
+  .save-btn {
+    margin-left: auto; background: var(--accent); color: white;
+    border: none; border-radius: var(--radius-sm); padding: 6px 18px;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: opacity 0.15s;
+  }
+  .save-btn:active { opacity: 0.8; }
+
+  /* ── 上限メッセージ ── */
+  .limit-msg {
+    background: var(--surface); border-radius: var(--radius);
+    padding: 16px 18px; font-size: 14px; color: var(--ink-muted);
+    font-style: italic; text-align: center; margin-bottom: 10px;
+  }
+  .limit-msg strong { color: var(--accent); font-style: normal; font-weight: 500; }
+
+  /* ── 全完了 ── */
+  .all-done { display: none; text-align: center; padding: 1.5rem 1rem; }
+  .all-done.show { display: block; }
+  .all-done-title { font-family: 'DM Serif Display', serif; font-size: 26px; color: var(--accent); margin-bottom: 6px; }
+  .all-done-sub { font-size: 14px; color: var(--ink-muted); }
+
+  /* ── 夜モード専用メッセージ ── */
+  .evening-hint {
+    display: none;
+    background: #EEF2FF; border-radius: var(--radius);
+    padding: 14px 18px; font-size: 14px; color: #3340A0;
+    text-align: center; margin-bottom: 10px;
+    line-height: 1.6;
+  }
+  .evening-mode .evening-hint { display: block; }
+  .evening-mode .add-area { display: none !important; }
+  .evening-mode .limit-msg { display: none !important; }
+
+  /* ── 空の状態 ── */
+  .empty-state { text-align: center; padding: 2.5rem 1rem 1rem; color: var(--ink-muted); }
+  .empty-state p { font-size: 14px; font-weight: 300; line-height: 1.8; }
+
+  /* ── 履歴セクション ── */
+  .history-section { margin-top: 2rem; }
+  .section-title { font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 10px; }
+
+  .history-list { display: flex; flex-direction: column; gap: 8px; }
+  .history-card {
+    background: var(--surface); border-radius: var(--radius-sm);
+    padding: 12px 16px; display: flex; align-items: center; gap: 12px;
+  }
+  .history-date { font-size: 12px; color: var(--ink-muted); width: 72px; flex-shrink: 0; }
+  .history-bar-wrap { flex: 1; display: flex; gap: 5px; }
+  .history-dot {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--ink-faint); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: white;
+  }
+  .history-dot.done { background: var(--accent); }
+  .history-pct { font-size: 13px; color: var(--ink-muted); font-weight: 500; margin-left: auto; }
+
+  /* ── フッターボタン ── */
+  .footer-row {
+    position: fixed; bottom: calc(var(--safe-bottom) + 1rem);
+    left: 1.25rem; right: 1.25rem;
+    display: flex; justify-content: flex-end;
+  }
+  .reset-btn {
+    font-family: 'DM Sans', sans-serif; font-size: 13px;
+    color: var(--ink-muted); background: var(--surface);
+    border: 1px solid var(--ink-faint); border-radius: 999px;
+    padding: 7px 18px; cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .reset-btn:active { color: var(--danger); border-color: var(--danger); }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <p class="date-label" id="date-label"></p>
+  <h1>今日の<em>みっつ</em></h1>
+  <span class="mode-badge" id="mode-badge">
+    <span class="mode-dot"></span>
+    <span id="mode-text"></span>
+  </span>
+</div>
+
+<div class="progress-row">
+  <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  <span class="progress-text" id="progress-text">0 / 0 完了</span>
+</div>
+
+<div class="evening-hint" id="evening-hint">
+  今日のタスクを確認しましょう。<br>完了したものにチェックを入れてください。
+</div>
+
+<div class="task-list" id="task-list"></div>
+
+<div class="add-area" id="add-area">
+  <div class="add-inner">
+    <div class="add-icon">+</div>
+    <input class="add-input" id="add-input" type="text" placeholder="今日やることを追加..." maxlength="60">
+  </div>
+  <div class="add-footer">
+    <input class="time-input" id="time-input" type="time">
+    <button class="save-btn" id="save-btn">追加</button>
+  </div>
+</div>
+
+<div class="limit-msg hidden" id="limit-msg">
+  <strong>3つ設定済みです。</strong> 今日のタスクに集中しましょう！
+</div>
+
+<div class="all-done" id="all-done">
+  <p class="all-done-title">すべて完了！</p>
+  <p class="all-done-sub">今日もよく頑張りました。</p>
+</div>
+
+<div class="history-section" id="history-section" style="display:none">
+  <p class="section-title">過去の達成記録</p>
+  <div class="history-list" id="history-list"></div>
+</div>
+
+<div class="footer-row">
+  <button class="reset-btn" id="reset-btn">今日をリセット</button>
+</div>
+
+<script>
+const TASKS_KEY = 'mittsu_tasks_v2';
+const HISTORY_KEY = 'mittsu_history_v2';
+const DATE_KEY = 'mittsu_date_v2';
+
+let tasks = [];
+let history = [];
+
+/* ── ユーティリティ ── */
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function formatDateJa(str) {
+  const [y, m, d] = str.split('-');
+  return `${m}/${d}`;
+}
+
+function formatDateFull() {
+  const d = new Date();
+  const days = ['日','月','火','水','木','金','土'];
+  return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${days[d.getDay()]}）`;
+}
+
+function getMode() {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12) return 'morning';
+  if (h >= 12 && h < 18) return 'day';
+  return 'evening';
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ── ストレージ ── */
+function load() {
+  try { tasks = JSON.parse(localStorage.getItem(TASKS_KEY)) || []; } catch(e) { tasks = []; }
+  try { history = JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch(e) { history = []; }
+
+  // 日付が変わっていたら前日のデータを履歴に保存してリセット
+  const saved = localStorage.getItem(DATE_KEY);
+  const today = todayStr();
+  if (saved && saved !== today && tasks.length > 0) {
+    const doneCount = tasks.filter(t => t.done).length;
+    history.unshift({ date: saved, tasks: tasks.slice(), done: doneCount, total: tasks.length });
+    if (history.length > 7) history = history.slice(0, 7);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    tasks = [];
+    localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
+  }
+  localStorage.setItem(DATE_KEY, today);
+}
+
+function save() {
+  localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
+}
+
+/* ── レンダリング ── */
+function render() {
+  const mode = getMode();
+  const body = document.body;
+  const modeText = document.getElementById('mode-text');
+  const modeBadge = document.getElementById('mode-badge');
+
+  // モードバッジ
+  if (mode === 'morning') {
+    modeText.textContent = '朝 — タスクを設定しましょう';
+    modeBadge.className = 'mode-badge morning';
+    body.classList.remove('evening-mode');
+  } else if (mode === 'evening') {
+    modeText.textContent = '夜 — 振り返りの時間';
+    modeBadge.className = 'mode-badge evening';
+    body.classList.add('evening-mode');
+  } else {
+    modeText.textContent = '昼 — 集中タイム';
+    modeBadge.className = 'mode-badge';
+    body.classList.remove('evening-mode');
+  }
+
+  // タスクリスト
+  const list = document.getElementById('task-list');
+  list.innerHTML = '';
+
+  if (tasks.length === 0) {
+    list.innerHTML = `<div class="empty-state"><p>まだタスクがありません。<br>今日やること3つを決めましょう。</p></div>`;
+  }
+
+  tasks.forEach((task, i) => {
+    const card = document.createElement('div');
+    card.className = 'task-card' + (task.done ? ' done' : '');
+    card.innerHTML = `
+      <button class="check-btn" data-i="${i}">✓</button>
+      <div class="task-body">
+        <p class="task-text">${escHtml(task.text)}</p>
+        ${task.time ? `<p class="task-time">${task.time}</p>` : ''}
+      </div>
+      <button class="del-btn" data-del="${i}">✕</button>
+    `;
+    list.appendChild(card);
+  });
+
+  // 進捗
+  const done = tasks.filter(t => t.done).length;
+  const total = tasks.length;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = `${done} / ${total} 完了`;
+
+  // 追加エリア表示制御
+  const addArea = document.getElementById('add-area');
+  const limitMsg = document.getElementById('limit-msg');
+  if (tasks.length >= 3) {
+    addArea.classList.add('hidden');
+    limitMsg.classList.remove('hidden');
+  } else {
+    addArea.classList.remove('hidden');
+    limitMsg.classList.add('hidden');
+  }
+
+  // 全完了
+  const allDone = document.getElementById('all-done');
+  if (total > 0 && done === total) allDone.classList.add('show');
+  else allDone.classList.remove('show');
+
+  // 履歴
+  renderHistory();
+}
+
+function renderHistory() {
+  const section = document.getElementById('history-section');
+  const list = document.getElementById('history-list');
+  if (history.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  list.innerHTML = history.map(day => {
+    const pct = day.total > 0 ? Math.round((day.done / day.total) * 100) : 0;
+    const dots = Array.from({length: day.total}, (_, i) =>
+      `<div class="history-dot ${i < day.done ? 'done' : ''}">✓</div>`
+    ).join('');
+    return `<div class="history-card">
+      <span class="history-date">${formatDateJa(day.date)}</span>
+      <div class="history-bar-wrap">${dots}</div>
+      <span class="history-pct">${pct}%</span>
+    </div>`;
+  }).join('');
+}
+
+/* ── イベント ── */
+function addTask() {
+  const input = document.getElementById('add-input');
+  const timeInput = document.getElementById('time-input');
+  const text = input.value.trim();
+  if (!text || tasks.length >= 3) return;
+  tasks.push({ text, time: timeInput.value || '', done: false });
+  save();
+  input.value = '';
+  timeInput.value = '';
+  render();
+  input.focus();
+}
+
+document.getElementById('save-btn').addEventListener('click', addTask);
+document.getElementById('add-input').addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
+
+document.getElementById('task-list').addEventListener('click', e => {
+  const check = e.target.closest('.check-btn');
+  if (check) {
+    const i = parseInt(check.dataset.i);
+    tasks[i].done = !tasks[i].done;
+    save();
+    render();
+    return;
+  }
+  const del = e.target.closest('[data-del]');
+  if (del) {
+    const i = parseInt(del.dataset.del);
+    tasks.splice(i, 1);
+    save();
+    render();
+  }
+});
+
+document.getElementById('reset-btn').addEventListener('click', () => {
+  if (tasks.length === 0 || confirm('今日のタスクをリセットしますか？')) {
+    tasks = [];
+    save();
+    render();
+  }
+});
+
+/* ── 初期化 ── */
+document.getElementById('date-label').textContent = formatDateFull();
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+load();
+render();
+
+// モードは時間で変わるので1分ごとに再チェック
+setInterval(render, 60000);
+</script>
+</body>
+</html>
