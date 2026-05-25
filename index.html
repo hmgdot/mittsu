@@ -180,6 +180,7 @@
   }
   .add-area:focus-within { border-color: var(--accent); border-style: solid; }
   .add-area.hidden { display: none; }
+  .hidden { display: none !important; }
 
   .add-inner { display: flex; align-items: center; gap: 12px; padding: 16px 18px 10px; }
   .add-icon {
@@ -274,6 +275,50 @@
   }
   .reset-btn:active { color: var(--danger); border-color: var(--danger); }
 
+  /* ── ランダム提案 ── */
+  .suggest-btn {
+    width: 100%; padding: 13px 18px;
+    background: transparent; border: 1.5px dashed var(--ink-faint);
+    border-radius: var(--radius); cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 14px;
+    color: var(--ink-muted); display: flex; align-items: center;
+    justify-content: center; gap: 8px;
+    transition: border-color 0.2s, color 0.2s;
+    margin-bottom: 10px;
+  }
+  .suggest-btn:active { border-color: var(--accent); color: var(--accent); }
+  .suggest-btn.hidden { display: none; }
+
+  .suggest-chips {
+    display: flex; flex-direction: column; gap: 8px;
+    margin-bottom: 10px;
+  }
+  .suggest-chips.hidden { display: none; }
+  .chip-row { display: flex; gap: 8px; align-items: center; }
+  .chip {
+    flex: 1; background: var(--surface); border: 1px solid var(--ink-faint);
+    border-radius: var(--radius); padding: 12px 14px;
+    font-family: 'DM Sans', sans-serif; font-size: 14px;
+    color: var(--ink); cursor: pointer; text-align: left;
+    line-height: 1.4; transition: border-color 0.15s, background 0.15s;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .chip:active { border-color: var(--accent); background: var(--accent-light); }
+  .chip-cat { font-size: 16px; flex-shrink: 0; }
+  .chip-add {
+    width: 36px; height: 36px; flex-shrink: 0;
+    background: var(--accent-light); border: none; border-radius: 50%;
+    color: var(--accent); font-size: 18px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  .chip-add:active { background: var(--accent); color: white; }
+  .suggest-refresh {
+    width: 100%; padding: 8px; background: transparent; border: none;
+    font-family: 'DM Sans', sans-serif; font-size: 13px;
+    color: var(--ink-muted); cursor: pointer; text-align: center;
+  }
+
   @keyframes slideIn {
     from { opacity: 0; transform: translateY(6px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -327,7 +372,9 @@
     <div class="modal-divider"></div>
 
     <div class="modal-note">
-      💡 ホーム画面に追加して使うと、データがブラウザをまたいで保存されます。Safariで「共有 → ホーム画面に追加」から追加してください。
+      💡 ホーム画面に追加するとアプリのように使えます。<br><br>
+      <strong>iPhone:</strong> Safariで開き、下の「共有」→「ホーム画面に追加」<br>
+      <strong>Android:</strong> Chromeで開き、右上メニュー「…」→「ホーム画面に追加」
     </div>
 
     <button class="modal-close" id="modal-close">閉じる</button>
@@ -360,6 +407,10 @@
   <strong>3つ設定済みです。</strong> 今日のタスクに集中しましょう！
 </div>
 
+<button class="suggest-btn" id="suggest-btn">🎲 やることを提案してもらう</button>
+
+<div class="suggest-chips hidden" id="suggest-chips"></div>
+
 <div class="all-done" id="all-done">
   <p class="all-done-title">すべて完了！</p>
   <p class="all-done-sub">今日もよく頑張りました。</p>
@@ -375,6 +426,57 @@
 </div>
 
 <script>
+/* ── タスク候補リスト ── */
+const SUGGESTIONS = {
+  '🧹 掃除': [
+    '台所をさっと拭き掃除する','シンクをピカピカに磨く','床を掃除機がけする',
+    '床を雑巾がけする','お風呂場を掃除する','トイレを掃除する',
+    'ソファの上の洗濯物を片付ける','洗面台を拭く','窓ガラスを拭く',
+    '冷蔵庫の中を整理する','押し入れを少し片付ける','玄関を掃き掃除する',
+    '電子レンジの中を拭く','ゴミ箱を洗う','カーテンを洗濯する',
+  ],
+  '🏃 運動': [
+    '15分ウォーキングする','近所を散歩する','いつもと違うスーパーに歩いて行く',
+    'ストレッチを10分する','YouTube見ながら軽い筋トレをする',
+    '自転車でひと回りする','階段を使う','公園でベンチに座って深呼吸する',
+    'ラジオ体操をする','ゆっくり湯船に浸かる',
+  ],
+  '📚 学び・趣味': [
+    '本を30分読む','積ん読している本を1章だけ読む','気になる記事を読む',
+    '好きな音楽をじっくり聴く','料理を一品作ってみる','日記を書く',
+    '写真を整理する','好きな映画を1本観る','手紙やメッセージを誰かに送る',
+    'スマホの写真をバックアップする',
+  ],
+  '🛒 お出かけ・用事': [
+    'いつもと違うカフェに行く','図書館に行く','100均でちょっとした買い物をする',
+    '気になっていたお店を覗く','郵便物を出しに行く','銀行・ATMに寄る',
+    '朝早く起きて近くのパン屋に行く',
+  ],
+};
+
+function getRandomSuggestions(count = 3) {
+  const all = Object.entries(SUGGESTIONS).flatMap(([cat, items]) =>
+    items.map(text => ({ cat, text }))
+  );
+  const shuffled = all.sort(() => Math.random() - 0.5);
+  // カテゴリが偏らないように調整
+  const result = [];
+  const usedCats = new Set();
+  for (const item of shuffled) {
+    if (result.length >= count) break;
+    if (!usedCats.has(item.cat)) {
+      result.push(item);
+      usedCats.add(item.cat);
+    }
+  }
+  // 足りない分は補充
+  for (const item of shuffled) {
+    if (result.length >= count) break;
+    if (!result.includes(item)) result.push(item);
+  }
+  return result.slice(0, count);
+}
+
 const TASKS_KEY = 'mittsu_tasks_v2';
 const HISTORY_KEY = 'mittsu_history_v2';
 const DATE_KEY = 'mittsu_date_v2';
@@ -487,12 +589,19 @@ function render() {
   // 追加エリア表示制御
   const addArea = document.getElementById('add-area');
   const limitMsg = document.getElementById('limit-msg');
+  const suggestBtn = document.getElementById('suggest-btn');
+  const suggestChips = document.getElementById('suggest-chips');
   if (tasks.length >= 3) {
     addArea.classList.add('hidden');
     limitMsg.classList.remove('hidden');
+    suggestBtn.classList.add('hidden');
+    suggestChips.classList.add('hidden');
   } else {
     addArea.classList.remove('hidden');
     limitMsg.classList.add('hidden');
+    if (suggestChips.classList.contains('hidden')) {
+      suggestBtn.classList.remove('hidden');
+    }
   }
 
   // 全完了
@@ -557,6 +666,54 @@ document.getElementById('task-list').addEventListener('click', e => {
   }
 });
 
+/* ── ランダム提案 ── */
+let currentSuggestions = [];
+
+function renderSuggestions() {
+  const chips = document.getElementById('suggest-chips');
+  chips.innerHTML = currentSuggestions.map((s, i) => `
+    <div class="chip-row">
+      <button class="chip" data-si="${i}">
+        <span class="chip-cat">${s.cat.split(' ')[0]}</span>
+        <span>${s.text}</span>
+      </button>
+      <button class="chip-add" data-si="${i}" title="追加">+</button>
+    </div>
+  `).join('') + `<button class="suggest-refresh" id="suggest-refresh">↻ 別の候補を見る</button>`;
+
+  document.getElementById('suggest-refresh').addEventListener('click', () => {
+    currentSuggestions = getRandomSuggestions(3);
+    renderSuggestions();
+  });
+
+  chips.querySelectorAll('.chip-add').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const i = parseInt(btn.dataset.si);
+      const s = currentSuggestions[i];
+      if (tasks.length >= 3) return;
+      tasks.push({ text: s.text, time: '', done: false });
+      save();
+      render();
+      // 3つ埋まったら提案を閉じる
+      if (tasks.length >= 3) {
+        document.getElementById('suggest-chips').classList.add('hidden');
+        document.getElementById('suggest-btn').classList.add('hidden');
+      } else {
+        currentSuggestions = getRandomSuggestions(3);
+        renderSuggestions();
+      }
+    });
+  });
+}
+
+document.getElementById('suggest-btn').addEventListener('click', () => {
+  const chips = document.getElementById('suggest-chips');
+  currentSuggestions = getRandomSuggestions(3);
+  renderSuggestions();
+  chips.classList.remove('hidden');
+  document.getElementById('suggest-btn').classList.add('hidden');
+});
+
 // モーダル
 document.getElementById('help-btn').addEventListener('click', () => {
   document.getElementById('modal-overlay').classList.add('show');
@@ -571,10 +728,32 @@ document.getElementById('modal-overlay').addEventListener('click', e => {
 });
 
 document.getElementById('reset-btn').addEventListener('click', () => {
-  if (tasks.length === 0 || confirm('今日のタスクをリセットしますか？')) {
+  if (tasks.length === 0) {
     tasks = [];
     save();
     render();
+    return;
+  }
+  // confirmの代わりにボタンを2秒間「本当にリセット？」に変えて再タップで確認
+  const btn = document.getElementById('reset-btn');
+  if (btn.dataset.confirm === 'pending') {
+    tasks = [];
+    save();
+    render();
+    btn.textContent = '今日をリセット';
+    btn.dataset.confirm = '';
+    clearTimeout(btn._timer);
+  } else {
+    btn.textContent = 'もう一度タップで確定';
+    btn.dataset.confirm = 'pending';
+    btn.style.color = 'var(--danger)';
+    btn.style.borderColor = 'var(--danger)';
+    btn._timer = setTimeout(() => {
+      btn.textContent = '今日をリセット';
+      btn.dataset.confirm = '';
+      btn.style.color = '';
+      btn.style.borderColor = '';
+    }, 2500);
   }
 });
 
