@@ -44,10 +44,74 @@
   }
 
   /* ── ヘッダー ── */
-  .header { margin-bottom: 1.75rem; }
+  .header { margin-bottom: 1.75rem; display: flex; align-items: flex-start; justify-content: space-between; }
+  .header-left { flex: 1; }
   .date-label { font-size: 12px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 4px; }
   h1 { font-family: 'DM Serif Display', serif; font-size: 38px; line-height: 1.1; margin-bottom: 6px; }
   h1 em { font-style: italic; color: var(--accent); }
+  .help-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 1px solid var(--ink-faint); background: var(--surface);
+    color: var(--ink-muted); font-size: 15px; font-weight: 500;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 4px;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .help-btn:active { border-color: var(--accent); color: var(--accent); }
+
+  /* ── モーダル ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4); z-index: 100;
+    align-items: flex-end; justify-content: center;
+    padding: 0;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--surface); border-radius: 24px 24px 0 0;
+    width: 100%; max-width: 560px;
+    padding: 1.5rem 1.5rem calc(var(--safe-bottom) + 2rem);
+    animation: slideUp 0.3s ease;
+    max-height: 85dvh; overflow-y: auto;
+  }
+  .modal-handle {
+    width: 36px; height: 4px; background: var(--ink-faint);
+    border-radius: 2px; margin: 0 auto 1.5rem;
+  }
+  .modal-title {
+    font-family: 'DM Serif Display', serif; font-size: 24px;
+    color: var(--ink); margin-bottom: 1.25rem;
+  }
+  .how-step {
+    display: flex; gap: 14px; margin-bottom: 1.25rem; align-items: flex-start;
+  }
+  .how-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent-light); color: var(--accent);
+    font-size: 13px; font-weight: 500; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .how-body { flex: 1; }
+  .how-heading { font-size: 15px; font-weight: 500; color: var(--ink); margin-bottom: 3px; }
+  .how-desc { font-size: 14px; color: var(--ink-muted); line-height: 1.6; }
+  .modal-divider { height: 1px; background: var(--bg); margin: 1.25rem 0; }
+  .modal-note {
+    font-size: 13px; color: var(--ink-muted); line-height: 1.7;
+    background: var(--bg); border-radius: var(--radius-sm); padding: 12px 14px;
+    margin-bottom: 1.25rem;
+  }
+  .modal-close {
+    width: 100%; padding: 13px; border-radius: var(--radius);
+    background: var(--accent); color: white; border: none;
+    font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500;
+    cursor: pointer; transition: opacity 0.15s;
+  }
+  .modal-close:active { opacity: 0.8; }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
   .mode-badge {
     display: inline-flex; align-items: center; gap: 6px;
     font-size: 12px; font-weight: 500; padding: 4px 12px;
@@ -215,20 +279,59 @@
     to   { opacity: 1; transform: translateY(0); }
   }
 </style>
-<script>
-  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-</script>
-<script defer src="/_vercel/insights/script.js"></script>
 </head>
 <body>
 
 <div class="header">
-  <p class="date-label" id="date-label"></p>
-  <h1>今日の<em>みっつ</em></h1>
-  <span class="mode-badge" id="mode-badge">
-    <span class="mode-dot"></span>
-    <span id="mode-text"></span>
-  </span>
+  <div class="header-left">
+    <p class="date-label" id="date-label"></p>
+    <h1>今日の<em>みっつ</em></h1>
+    <span class="mode-badge" id="mode-badge">
+      <span class="mode-dot"></span>
+      <span id="mode-text"></span>
+    </span>
+  </div>
+  <button class="help-btn" id="help-btn">?</button>
+</div>
+
+<!-- 使い方モーダル -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal">
+    <div class="modal-handle"></div>
+    <p class="modal-title">使い方</p>
+
+    <div class="how-step">
+      <div class="how-num">1</div>
+      <div class="how-body">
+        <p class="how-heading">朝、今日やることを3つ決める</p>
+        <p class="how-desc">入力欄にタスクを追加してください。3つまで設定できます。時間の目安も入力できます。</p>
+      </div>
+    </div>
+
+    <div class="how-step">
+      <div class="how-num">2</div>
+      <div class="how-body">
+        <p class="how-heading">日中、タスクが終わったらチェック</p>
+        <p class="how-desc">タスクの左の丸ボタンをタップすると完了になります。</p>
+      </div>
+    </div>
+
+    <div class="how-step">
+      <div class="how-num">3</div>
+      <div class="how-body">
+        <p class="how-heading">夜、達成率を振り返る</p>
+        <p class="how-desc">18時以降は振り返りモードになります。下にスクロールすると過去の達成記録も確認できます。</p>
+      </div>
+    </div>
+
+    <div class="modal-divider"></div>
+
+    <div class="modal-note">
+      💡 ホーム画面に追加して使うと、データがブラウザをまたいで保存されます。Safariで「共有 → ホーム画面に追加」から追加してください。
+    </div>
+
+    <button class="modal-close" id="modal-close">閉じる</button>
+  </div>
 </div>
 
 <div class="progress-row">
@@ -451,6 +554,19 @@ document.getElementById('task-list').addEventListener('click', e => {
     tasks.splice(i, 1);
     save();
     render();
+  }
+});
+
+// モーダル
+document.getElementById('help-btn').addEventListener('click', () => {
+  document.getElementById('modal-overlay').classList.add('show');
+});
+document.getElementById('modal-close').addEventListener('click', () => {
+  document.getElementById('modal-overlay').classList.remove('show');
+});
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-overlay')) {
+    document.getElementById('modal-overlay').classList.remove('show');
   }
 });
 
